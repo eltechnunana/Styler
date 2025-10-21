@@ -182,6 +182,9 @@
     }
     data.customFields = customFields;
     
+    // Collect style reference images
+    data.styleImages = window.styleImages || [];
+    
     data.unit = unitToggle.checked ? 'in' : 'cm';
     data.gender = document.querySelector('input[name="gender"]:checked')?.value || 'male';
     const notesEl = document.getElementById('field-notes');
@@ -239,6 +242,16 @@
           customFieldsContainer.appendChild(row);
         }
       });
+    }
+    
+    // Restore style images
+    if (data.styleImages && data.styleImages.length > 0) {
+      window.styleImages = data.styleImages;
+      displayUploadedImages();
+    } else {
+      window.styleImages = [];
+      const previewArea = document.getElementById('imagePreviewArea');
+      if (previewArea) previewArea.style.display = 'none';
     }
     
     updateSuggestions();
@@ -452,6 +465,129 @@
       }
     } catch {}
   })();
+
+  // Initialize style images functionality
+  window.styleImages = [];
+  
+  // Image upload functionality
+  const styleImagesInput = document.getElementById('styleImages');
+  const uploadImagesBtn = document.getElementById('uploadImagesBtn');
+  const imagePreviewArea = document.getElementById('imagePreviewArea');
+  const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+  const clearAllImagesBtn = document.getElementById('clearAllImages');
+
+  function displayUploadedImages() {
+    if (!window.styleImages || window.styleImages.length === 0) {
+      imagePreviewArea.style.display = 'none';
+      return;
+    }
+
+    imagePreviewArea.style.display = 'block';
+    imagePreviewContainer.innerHTML = '';
+
+    window.styleImages.forEach((imageData, index) => {
+      const col = document.createElement('div');
+      col.className = 'col-6 col-md-4 col-lg-3';
+      
+      col.innerHTML = `
+        <div class="card">
+          <img src="${imageData.dataUrl}" class="card-img-top" style="height: 120px; object-fit: cover;" alt="Style reference ${index + 1}">
+          <div class="card-body p-2">
+            <small class="text-muted d-block text-truncate">${imageData.name}</small>
+            <button class="btn btn-sm btn-outline-danger mt-1 w-100" onclick="removeStyleImage(${index})">
+              <i class="bi bi-trash"></i> Remove
+            </button>
+          </div>
+        </div>
+      `;
+      
+      imagePreviewContainer.appendChild(col);
+    });
+  }
+
+  window.removeStyleImage = function(index) {
+    window.styleImages.splice(index, 1);
+    displayUploadedImages();
+    showNotification('Image removed successfully!', 'success');
+  };
+
+  function processImageFiles(files) {
+    const promises = Array.from(files).map(file => {
+      return new Promise((resolve) => {
+        if (!file.type.startsWith('image/')) {
+          showNotification(`${file.name} is not an image file`, 'warning');
+          resolve(null);
+          return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          showNotification(`${file.name} is too large (max 5MB)`, 'warning');
+          resolve(null);
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          resolve({
+            name: file.name,
+            dataUrl: e.target.result,
+            size: file.size,
+            type: file.type,
+            uploadedAt: new Date().toISOString()
+          });
+        };
+        reader.onerror = function() {
+          showNotification(`Error reading ${file.name}`, 'danger');
+          resolve(null);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(promises).then(results => {
+      const validImages = results.filter(img => img !== null);
+      if (validImages.length > 0) {
+        window.styleImages.push(...validImages);
+        displayUploadedImages();
+        showNotification(`${validImages.length} image(s) uploaded successfully!`, 'success');
+        
+        // Clear the file input
+        styleImagesInput.value = '';
+      }
+    });
+  }
+
+  if (uploadImagesBtn) {
+    uploadImagesBtn.addEventListener('click', () => {
+      const files = styleImagesInput.files;
+      if (files.length === 0) {
+        showNotification('Please select images to upload', 'warning');
+        return;
+      }
+      processImageFiles(files);
+    });
+  }
+
+  if (styleImagesInput) {
+    styleImagesInput.addEventListener('change', () => {
+      if (styleImagesInput.files.length > 0) {
+        processImageFiles(styleImagesInput.files);
+      }
+    });
+  }
+
+  if (clearAllImagesBtn) {
+    clearAllImagesBtn.addEventListener('click', () => {
+      if (window.styleImages.length === 0) return;
+      
+      if (confirm('Are you sure you want to remove all images?')) {
+        window.styleImages = [];
+        displayUploadedImages();
+        showNotification('All images cleared!', 'success');
+      }
+    });
+  }
+
   loadMeasurements();
   applyFieldTemplate();
   updateSuggestions();

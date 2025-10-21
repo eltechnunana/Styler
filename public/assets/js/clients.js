@@ -104,8 +104,91 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // Display style reference images
+    displayStyleImages(datasets);
+
     modal.show();
   }
+
+  function displayStyleImages(datasets) {
+    const styleImagesSection = document.getElementById('styleImagesSection');
+    const clientStyleImages = document.getElementById('clientStyleImages');
+    
+    if (!styleImagesSection || !clientStyleImages) return;
+    
+    // Clear previous images
+    clientStyleImages.innerHTML = '';
+    
+    // Collect all images from all datasets
+    let allImages = [];
+    datasets.forEach(({ data }) => {
+      if (data.styleImages && Array.isArray(data.styleImages)) {
+        allImages = allImages.concat(data.styleImages);
+      }
+    });
+    
+    if (allImages.length === 0) {
+      styleImagesSection.style.display = 'none';
+      return;
+    }
+    
+    styleImagesSection.style.display = 'block';
+    
+    allImages.forEach((imageData, index) => {
+      const col = document.createElement('div');
+      col.className = 'col-6 col-md-4 col-lg-3';
+      
+      col.innerHTML = `
+        <div class="card">
+          <img src="${imageData.dataUrl}" class="card-img-top" style="height: 120px; object-fit: cover; cursor: pointer;" alt="Style reference ${index + 1}" onclick="openImageModal('${imageData.dataUrl}', '${imageData.name}')">
+          <div class="card-body p-2">
+            <small class="text-muted d-block text-truncate" title="${imageData.name}">${imageData.name}</small>
+            <small class="text-muted d-block">${imageData.uploadedAt ? new Date(imageData.uploadedAt).toLocaleDateString() : ''}</small>
+          </div>
+        </div>
+      `;
+      
+      clientStyleImages.appendChild(col);
+    });
+  }
+
+  // Function to open image in a modal for full view
+  window.openImageModal = function(imageUrl, imageName) {
+    // Create a simple modal for image viewing
+    const modalHtml = `
+      <div class="modal fade" id="imageViewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">${imageName}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+              <img src="${imageUrl}" class="img-fluid" alt="${imageName}" style="max-height: 70vh;">
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('imageViewModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // Add new modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show the modal
+    const imageModal = new bootstrap.Modal(document.getElementById('imageViewModal'));
+    imageModal.show();
+    
+    // Clean up modal after it's hidden
+    document.getElementById('imageViewModal').addEventListener('hidden.bs.modal', function() {
+      this.remove();
+    });
+  };
 
   function render() {
     const list = ST.clients.all();

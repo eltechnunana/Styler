@@ -263,6 +263,37 @@
                 <textarea id="field-notes" class="form-control" rows="3" placeholder="Any special fit preferences or instructions"></textarea>
               </div>
 
+              <!-- Style Reference Images Section -->
+              <div class="mt-3">
+                <div class="d-flex align-items-center justify-content-between">
+                  <h6 class="mb-0">Style Reference Images</h6>
+                  <small class="text-muted">Upload photos to guide your sewing</small>
+                </div>
+                <div class="mt-2">
+                  <div class="input-group">
+                    <input type="file" class="form-control" id="styleImages" accept="image/*" multiple>
+                    <button class="btn btn-outline-primary" type="button" id="uploadImagesBtn">
+                      <i class="bi bi-cloud-upload"></i> Upload
+                    </button>
+                  </div>
+                  <div class="form-text">
+                    <i class="bi bi-info-circle"></i> 
+                    Upload multiple images showing the desired style, fit, or design details
+                  </div>
+                </div>
+                
+                <!-- Image Preview Area -->
+                <div id="imagePreviewArea" class="mt-3" style="display: none;">
+                  <div class="d-flex align-items-center justify-content-between mb-2">
+                    <small class="text-muted">Uploaded Images:</small>
+                    <button id="clearAllImages" class="btn btn-sm btn-outline-danger">
+                      <i class="bi bi-trash"></i> Clear All
+                    </button>
+                  </div>
+                  <div id="imagePreviewContainer" class="row g-2"></div>
+                </div>
+              </div>
+
               <div class="mt-3">
                 <div class="d-flex align-items-center justify-content-between">
                   <h6 class="mb-0">Custom Fields</h6>
