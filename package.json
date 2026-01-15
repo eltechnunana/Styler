@@ -10,7 +10,25 @@
   "dependencies": {
     "express": "^4.18.2"
   },
-  "keywords": ["tailoring", "measurements", "tracking"],
+  "keywords": [
+    "tailoring",
+    "measurements",
+    "tracking"
+  ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/preset-env": "^7.28.5",
+    "@babel/preset-react": "^7.28.5",
+    "@babel/preset-typescript": "^7.28.5",
+    "babel-loader": "^10.0.0",
+    "file-loader": "^6.2.0",
+    "html-webpack-plugin": "^5.6.5",
+    "metro-react-native-babel-preset": "^0.77.0",
+    "react-native-web": "^0.21.2",
+    "url-loader": "^4.1.1",
+    "webpack": "^5.103.0",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
+  }
 }
