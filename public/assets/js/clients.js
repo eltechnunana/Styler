@@ -1,163 +1,61 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const tbody = document.querySelector('#clientsTable tbody');
-  const addBtn = document.getElementById('addClientBtn');
-  const modalEl = document.getElementById('measureModal');
-  const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
-  const titleEl = document.getElementById('measureTitle');
-  const emptyEl = document.getElementById('measureEmpty');
-  const tableWrap = document.getElementById('measureTableWrap');
-  const tableBody = document.getElementById('measureTableBody');
-  const openBtn = document.getElementById('openMeasurementsBtn');
-
-  const FIELD_LABELS = {
-    'field-height': 'Height',
-    'field-neck': 'Neck',
-    'field-shoulder': 'Shoulder',
-    'field-chest': 'Chest',
-    'field-waist': 'Waist',
-    'field-hip': 'Hip',
-    'field-arm_length': 'Arm Length',
-    'field-sleeve_length': 'Sleeve Length',
-    'field-back_width': 'Back Width',
-    'field-trouser_length': 'Trouser Length',
-    'field-thigh': 'Thigh',
-    'field-inseam': 'Inseam'
-  };
-  const ORDERED_FIELDS = Object.keys(FIELD_LABELS);
-
-  function showMeasurements(client) {
-    if (!modal) return;
-    titleEl.textContent = `Measurements – ${client.name}`;
-    tableBody.innerHTML = '';
-
-    const datasets = ['male','female','custom']
-      .map(g => ({ gender: g, data: ST.measurements.get(client.id, g) || ST.measurements.get(client.name, g) }))
-      .filter(d => !!d.data);
-
-    if (!datasets.length) {
-      // Fallback legacy single dataset
-      const legacy = ST.measurements.get(client.id) || ST.measurements.get(client.name);
-      if (!legacy) { tableWrap.style.display = 'none'; emptyEl.style.display = 'block'; openBtn.href = `index.html?client=${client.id}`; modal.show(); return; }
-      datasets.push({ gender: legacy.gender || 'male', data: legacy });
-    }
-
-    // Determine latest dataset for default open link
-    const latest = datasets.slice().sort((a,b) => new Date(b.data.savedAt || 0) - new Date(a.data.savedAt || 0))[0];
-    openBtn.href = `index.html?client=${client.id}&gender=${latest.gender}`;
-
-    tableBody.innerHTML = '';
-    emptyEl.style.display = 'none'; tableWrap.style.display = 'block';
-
-    datasets.forEach(({ gender, data }, idx) => {
-      const unit = data.unit || 'cm';
-      // Section header
-      const hdr = document.createElement('tr');
-      const h1 = document.createElement('td'); h1.colSpan = 2; h1.innerHTML = `<strong>${gender.charAt(0).toUpperCase() + gender.slice(1)}</strong>`;
-      hdr.appendChild(h1);
-      tableBody.appendChild(hdr);
-
-      const savedAt = data.savedAt;
-      if (savedAt) {
-        const tr = document.createElement('tr');
-        const td1 = document.createElement('td'); td1.textContent = 'Last Saved';
-        const td2 = document.createElement('td'); td2.textContent = new Date(savedAt).toLocaleString();
-        tr.append(td1, td2); tableBody.appendChild(tr);
-      }
-      const notes = (data.notes || '').trim();
-      if (notes) {
-        const tr = document.createElement('tr');
-        const td1 = document.createElement('td'); td1.textContent = 'Notes';
-        const td2 = document.createElement('td'); td2.textContent = notes;
-        tr.append(td1, td2); tableBody.appendChild(tr);
-      }
-      ORDERED_FIELDS.forEach(key => {
-        const val = data[key] ?? '';
-        if (val !== '') {
-          const tr = document.createElement('tr');
-          const td1 = document.createElement('td'); td1.textContent = FIELD_LABELS[key];
-          const td2 = document.createElement('td'); td2.textContent = `${val} ${unit}`;
-          tr.append(td1, td2); tableBody.appendChild(tr);
-        }
+    const clientsList = document.getElementById('clientsList');
+    const searchInput = document.getElementById('searchClient');
+    const addClientBtn = document.getElementById('addClientBtn');
+  
+    // Initial render
+    renderClients();
+  
+    // Search listener
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        renderClients(e.target.value);
       });
-      
-      // Display custom fields
-      console.log('Debug: Checking custom fields for', gender, data);
-      console.log('Custom fields data:', data.customFields);
-      if (data.customFields && Object.keys(data.customFields).length > 0) {
-        console.log('Found custom fields:', Object.keys(data.customFields));
-        Object.entries(data.customFields).forEach(([fieldName, fieldValue]) => {
-          console.log('Processing custom field:', fieldName, '=', fieldValue);
-          if (fieldName.trim() && fieldValue !== '') {
-            const tr = document.createElement('tr');
-            const td1 = document.createElement('td'); td1.textContent = fieldName;
-            const td2 = document.createElement('td'); td2.textContent = `${fieldValue} ${unit}`;
-            tr.append(td1, td2); tableBody.appendChild(tr);
+    }
+  
+    // Add client (Basic flow)
+    if (addClientBtn) {
+      addClientBtn.addEventListener('click', () => {
+        openClientNameDialog({
+          title: 'Add New Client',
+          onSave(name) {
+            if (name) {
+              const newClient = {
+                id: Date.now().toString(),
+                name: name.trim(),
+                phone: '',
+                email: '',
+                measurements: {}
+              };
+              ST.clients.add(newClient);
+              renderClients();
+            }
           }
         });
-      } else {
-        console.log('No custom fields found or empty object');
-      }
+      });
+    }
+  
+    // Reusable modal for entering/editing client name
+    function openClientNameDialog(options) {
+      const { title, initial, onSave } = options;
       
-      // Display photos
-      console.log('Debug: Checking photos for', gender, data);
-      console.log('Photos data:', data.photos);
-      if (data.photos && data.photos.length > 0) {
-        console.log('Found photos:', data.photos.length);
-        const tr = document.createElement('tr');
-        const td1 = document.createElement('td'); td1.textContent = 'Style Photos';
-        const td2 = document.createElement('td');
-        
-        const photoContainer = document.createElement('div');
-        photoContainer.className = 'row g-2';
-        
-        data.photos.forEach((photo, index) => {
-          if (photo.src) {
-            const photoDiv = document.createElement('div');
-            photoDiv.className = 'col-6 col-md-4';
-            photoDiv.innerHTML = `
-              <div class="position-relative">
-                <img src="${photo.src}" class="img-fluid rounded" style="height: 80px; object-fit: cover; width: 100%; cursor: pointer;" 
-                     data-bs-toggle="modal" data-bs-target="#photoViewModal" 
-                     onclick="showPhotoModal('${photo.src}', '${photo.name}')">
-                <small class="text-muted d-block mt-1">${photo.name}</small>
-              </div>
-            `;
-            photoContainer.appendChild(photoDiv);
-          }
-        });
-        
-        td2.appendChild(photoContainer);
-        tr.append(td1, td2); 
-        tableBody.appendChild(tr);
-      } else {
-        console.log('No photos found or empty array');
-      }
-      
-      // Separator between datasets
-      if (idx < datasets.length - 1) {
-        const sep = document.createElement('tr'); const td = document.createElement('td'); td.colSpan = 2; td.innerHTML = '<hr class="my-2">'; sep.appendChild(td); tableBody.appendChild(sep);
-      }
-    });
-
-    modal.show();
-  }
-
-  function openClientNameDialog(options) {
-    const existing = document.getElementById('clientNameModal');
-    let el = existing;
-    if (!el) {
-      el = document.createElement('div');
+      // Remove existing if any
+      const existing = document.getElementById('clientNameModal');
+      if (existing) existing.remove();
+  
+      const el = document.createElement('div');
       el.className = 'modal fade';
       el.id = 'clientNameModal';
+      el.setAttribute('tabindex', '-1');
       el.innerHTML = `
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title">Client Name</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              <h5 class="modal-title">${title || 'Client Name'}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-              <input type="text" class="form-control" id="clientNameInput">
+              <input type="text" class="form-control" id="clientNameInput" value="${initial || ''}" placeholder="Enter client name">
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -167,131 +65,102 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
       document.body.appendChild(el);
-    }
-    const instance = bootstrap.Modal.getOrCreateInstance(el);
-    const title = el.querySelector('.modal-title');
-    const input = el.querySelector('#clientNameInput');
-    const saveBtn = el.querySelector('#clientNameSaveBtn');
-    if (title && options && options.title) title.textContent = options.title;
-    if (input) input.value = (options && options.initial) || '';
-    function handleSave() {
-      if (!input) return;
-      const value = input.value.trim();
-      if (!value) return;
-      instance.hide();
-      if (options && typeof options.onSave === 'function') {
-        options.onSave(value);
-      }
-    }
-    if (saveBtn) {
-      saveBtn.onclick = null;
-      saveBtn.addEventListener('click', handleSave, { once: true });
-    }
-    if (input) {
-      input.onkeydown = function(e) {
-        if (e.key === 'Enter') {
-          handleSave();
+  
+      const modal = new bootstrap.Modal(el);
+      modal.show();
+  
+      const input = el.querySelector('#clientNameInput');
+      const saveBtn = el.querySelector('#clientNameSaveBtn');
+  
+      // Focus input
+      el.addEventListener('shown.bs.modal', () => input.focus());
+  
+      // Save handlers
+      const handleSave = () => {
+        const val = input.value.trim();
+        if (val) {
+          onSave(val);
+          modal.hide();
         }
       };
-      setTimeout(() => input.focus(), 150);
+  
+      saveBtn.addEventListener('click', handleSave);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSave();
+      });
+  
+      // Cleanup
+      el.addEventListener('hidden.bs.modal', () => el.remove());
     }
-    instance.show();
-  }
-
-  function render() {
-    const list = ST.clients.all();
-    tbody.innerHTML = '';
-    if (!list.length) {
-      const tr = document.createElement('tr');
-      const td = document.createElement('td'); td.colSpan = 2; td.textContent = 'No clients yet.'; td.className = 'text-muted';
-      tr.appendChild(td); tbody.appendChild(tr); return;
-    }
-    list.forEach(c => {
-      const tr = document.createElement('tr');
-      const nameTd = document.createElement('td');
-      const nameLink = document.createElement('a'); nameLink.href = '#'; nameLink.textContent = c.name;
-      nameLink.addEventListener('click', (e) => { e.preventDefault(); showMeasurements(c); });
-      nameTd.appendChild(nameLink); tr.appendChild(nameTd);
-      const actionsTd = document.createElement('td'); actionsTd.className = 'text-end';
-
-      const viewBtn = document.createElement('button'); viewBtn.className = 'btn btn-sm btn-outline-primary me-2'; viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
-      viewBtn.addEventListener('click', () => showMeasurements(c));
-
-      const editBtn = document.createElement('button'); editBtn.className = 'btn btn-sm btn-outline-secondary me-2'; editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
-      editBtn.addEventListener('click', () => {
-        openClientNameDialog({
-          title: 'Edit client name',
-          initial: c.name,
-          onSave(value) {
-            if (value && value !== c.name) {
-              ST.clients.update(c.id, { name: value });
-              render();
+  
+    function renderClients(query = '') {
+      if (!clientsList) return;
+      clientsList.innerHTML = '';
+      
+      const clients = ST.clients.getAll();
+      const filtered = clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
+  
+      if (filtered.length === 0) {
+        clientsList.innerHTML = '<div class="list-group-item text-muted">No clients found.</div>';
+        return;
+      }
+  
+      filtered.forEach(c => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+        
+        // Client info
+        const info = document.createElement('div');
+        info.innerHTML = `<strong>${c.name}</strong><br><small class="text-muted">${c.phone || 'No phone'}</small>`;
+        
+        // Actions
+        const actions = document.createElement('div');
+        
+        // Edit Button
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn btn-sm btn-outline-secondary me-2';
+        editBtn.textContent = 'Edit Name';
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openClientNameDialog({
+            title: 'Edit Client Name',
+            initial: c.name,
+            onSave(newName) {
+              if (newName && newName !== c.name) {
+                ST.clients.update(c.id, { name: newName });
+                renderClients(searchInput ? searchInput.value : '');
+              }
             }
+          });
+        });
+  
+        // Delete Button
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-sm btn-outline-danger';
+        delBtn.textContent = 'Delete';
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (confirm(`Delete ${c.name}?`)) {
+            ST.clients.delete(c.id);
+            renderClients(searchInput ? searchInput.value : '');
           }
         });
-      });
-
-      const delBtn = document.createElement('button'); delBtn.className = 'btn btn-sm btn-outline-danger'; delBtn.innerHTML = '<i class="bi bi-trash"></i>';
-      delBtn.addEventListener('click', () => {
-        if (confirm(`Delete client "${c.name}"?`)) { 
-          ST.clients.remove(c.id); 
-          render(); 
-          // Trigger dashboard update if on home page
-          if (window.renderCounts && typeof window.renderCounts === 'function') {
-            window.renderCounts();
+  
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+        
+        item.appendChild(info);
+        item.appendChild(actions);
+  
+        // Clicking the row (except buttons) could go to details/measurements
+        item.addEventListener('click', (e) => {
+          if (e.target !== editBtn && e.target !== delBtn) {
+            // For now, maybe just log or go to a measurements page
+            // window.location.href = `measurements.html?id=${c.id}`;
           }
-        }
+        });
+  
+        clientsList.appendChild(item);
       });
-
-      actionsTd.append(viewBtn, editBtn, delBtn); tr.appendChild(actionsTd); tbody.appendChild(tr);
-    });
-  }
-
-  addBtn.addEventListener('click', () => {
-    openClientNameDialog({
-      title: 'New client name',
-      initial: '',
-      onSave(value) {
-        if (value) {
-          ST.clients.add(value);
-          render();
-        }
-      }
-    });
-  });
-
-  // Photo modal functionality
-  window.showPhotoModal = function(src, name) {
-    // Create modal if it doesn't exist
-    let photoModal = document.getElementById('photoViewModal');
-    if (!photoModal) {
-      photoModal = document.createElement('div');
-      photoModal.className = 'modal fade';
-      photoModal.id = 'photoViewModal';
-      photoModal.innerHTML = `
-        <div class="modal-dialog modal-lg">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="photoModalTitle">Style Photo</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-              <img id="photoModalImage" class="img-fluid" style="max-height: 70vh;">
-            </div>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(photoModal);
     }
-    
-    // Update modal content
-    document.getElementById('photoModalTitle').textContent = name || 'Style Photo';
-    document.getElementById('photoModalImage').src = src;
-    
-    // Show modal
-    const modal = new bootstrap.Modal(photoModal);
-    modal.show();
-  };
-
-  render();
-});
+  });
