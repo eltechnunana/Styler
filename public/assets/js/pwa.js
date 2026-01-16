@@ -1,4 +1,3 @@
-// Lightweight PWA bootstrap: registers the service worker
 (() => {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -7,6 +6,10 @@
           console.log('Service worker registered:', reg.scope);
         })
         .catch(err => {
+          if (err && err.name === 'InvalidStateError') {
+            console.warn('Service worker not registered in this environment:', err.message);
+            return;
+          }
           console.error('Service worker registration failed:', err);
         });
     });

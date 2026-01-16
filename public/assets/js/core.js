@@ -8,13 +8,49 @@
 
   const clients = {
     all() {
-      try { return JSON.parse(localStorage.getItem(KEY_CLIENTS) || '[]'); } catch { return []; }
+      try {
+        const raw = JSON.parse(localStorage.getItem(KEY_CLIENTS) || '[]');
+        if (!Array.isArray(raw)) return [];
+        let changed = false;
+        const normalized = raw.map(c => {
+          if (c && typeof c.name === 'object' && c.name !== null) {
+            const nested = c.name;
+            const name =
+              typeof nested.name === 'string'
+                ? nested.name
+                : typeof nested === 'string'
+                ? nested
+                : String(nested.name || '');
+            changed = true;
+            return { ...c, name };
+          }
+          return c;
+        });
+        if (changed) {
+          localStorage.setItem(KEY_CLIENTS, JSON.stringify(normalized));
+        }
+        return normalized;
+      } catch {
+        return [];
+      }
     },
     save(list) { localStorage.setItem(KEY_CLIENTS, JSON.stringify(list)); },
-    add(name) {
-      if (!name) return null;
+    add(input) {
+      if (!input) return null;
       const list = this.all();
-      const c = { id: uid(), name };
+      let c;
+      if (typeof input === 'string') {
+        c = { id: uid(), name: input };
+      } else {
+        const id = input.id || uid();
+        const name =
+          typeof input.name === 'string'
+            ? input.name
+            : String((input.name && input.name.name) || '');
+        const phone = input.phone || '';
+        const email = input.email || '';
+        c = { id, name, phone, email };
+      }
       list.push(c); this.save(list);
       return c;
     },

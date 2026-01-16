@@ -93,11 +93,11 @@ document.addEventListener('DOMContentLoaded', () => {
     doc.text(`Business ID: ${biz.bizId || 'GW-028-40073'}`, 14, yStart);
     yStart += 5;
     if (biz.bizEmail) {
-      doc.text(`📧 ${biz.bizEmail}`, 14, yStart);
+      doc.text(`Email: ${biz.bizEmail}`, 14, yStart);
       yStart += 5;
     }
     if (biz.bizPhone) {
-      doc.text(`📞 ${biz.bizPhone}`, 14, yStart);
+      doc.text(`Phone: ${biz.bizPhone}`, 14, yStart);
       yStart += 5;
     }
 

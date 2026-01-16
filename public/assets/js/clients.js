@@ -1,10 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const clientsList = document.getElementById('clientsList');
+    const clientsTableBody = document.querySelector('#clientsTable tbody');
     const searchInput = document.getElementById('searchClient');
     const addClientBtn = document.getElementById('addClientBtn');
-  
-    // Initial render
-    renderClients();
   
     // Search listener
     if (searchInput) {
@@ -13,21 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   
-    // Add client (Basic flow)
     if (addClientBtn) {
       addClientBtn.addEventListener('click', () => {
         openClientNameDialog({
           title: 'Add New Client',
           onSave(name) {
             if (name) {
-              const newClient = {
-                id: Date.now().toString(),
-                name: name.trim(),
-                phone: '',
-                email: '',
-                measurements: {}
-              };
-              ST.clients.add(newClient);
+              ST.clients.add(name.trim());
               renderClients();
             }
           }
@@ -39,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function openClientNameDialog(options) {
       const { title, initial, onSave } = options;
       
-      // Remove existing if any
       const existing = document.getElementById('clientNameModal');
       if (existing) existing.remove();
   
@@ -72,10 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const input = el.querySelector('#clientNameInput');
       const saveBtn = el.querySelector('#clientNameSaveBtn');
   
-      // Focus input
       el.addEventListener('shown.bs.modal', () => input.focus());
   
-      // Save handlers
       const handleSave = () => {
         const val = input.value.trim();
         if (val) {
@@ -89,37 +75,45 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') handleSave();
       });
   
-      // Cleanup
       el.addEventListener('hidden.bs.modal', () => el.remove());
     }
   
     function renderClients(query = '') {
-      if (!clientsList) return;
-      clientsList.innerHTML = '';
+      if (!clientsTableBody) return;
+      clientsTableBody.innerHTML = '';
       
-      const clients = ST.clients.getAll();
+      const clients = ST.clients.all();
       const filtered = clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
   
       if (filtered.length === 0) {
-        clientsList.innerHTML = '<div class="list-group-item text-muted">No clients found.</div>';
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 2;
+        td.className = 'text-muted';
+        td.textContent = 'No clients found.';
+        tr.appendChild(td);
+        clientsTableBody.appendChild(tr);
         return;
       }
   
       filtered.forEach(c => {
-        const item = document.createElement('div');
-        item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+        const tr = document.createElement('tr');
         
-        // Client info
-        const info = document.createElement('div');
-        info.innerHTML = `<strong>${c.name}</strong><br><small class="text-muted">${c.phone || 'No phone'}</small>`;
+        const nameTd = document.createElement('td');
+        // Link to measurements page with client pre-selected
+        const nameLink = document.createElement('a');
+        nameLink.href = `index.html?client=${c.id}`;
+        nameLink.textContent = c.name;
+        nameLink.className = 'text-decoration-none text-dark fw-bold';
+        nameTd.appendChild(nameLink);
+        tr.appendChild(nameTd);
         
-        // Actions
-        const actions = document.createElement('div');
+        const actionsTd = document.createElement('td');
+        actionsTd.style.whiteSpace = 'nowrap';
         
-        // Edit Button
         const editBtn = document.createElement('button');
         editBtn.className = 'btn btn-sm btn-outline-secondary me-2';
-        editBtn.textContent = 'Edit Name';
+        editBtn.textContent = 'Edit';
         editBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           openClientNameDialog({
@@ -134,33 +128,24 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         });
   
-        // Delete Button
         const delBtn = document.createElement('button');
         delBtn.className = 'btn btn-sm btn-outline-danger';
         delBtn.textContent = 'Delete';
         delBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           if (confirm(`Delete ${c.name}?`)) {
-            ST.clients.delete(c.id);
+            ST.clients.remove(c.id);
             renderClients(searchInput ? searchInput.value : '');
           }
         });
   
-        actions.appendChild(editBtn);
-        actions.appendChild(delBtn);
-        
-        item.appendChild(info);
-        item.appendChild(actions);
+        actionsTd.appendChild(editBtn);
+        actionsTd.appendChild(delBtn);
+        tr.appendChild(actionsTd);
   
-        // Clicking the row (except buttons) could go to details/measurements
-        item.addEventListener('click', (e) => {
-          if (e.target !== editBtn && e.target !== delBtn) {
-            // For now, maybe just log or go to a measurements page
-            // window.location.href = `measurements.html?id=${c.id}`;
-          }
-        });
-  
-        clientsList.appendChild(item);
+        clientsTableBody.appendChild(tr);
       });
     }
+  
+    renderClients();
   });
