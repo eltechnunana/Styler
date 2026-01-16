@@ -142,6 +142,62 @@ document.addEventListener('DOMContentLoaded', () => {
     modal.show();
   }
 
+  function openClientNameDialog(options) {
+    const existing = document.getElementById('clientNameModal');
+    let el = existing;
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'modal fade';
+      el.id = 'clientNameModal';
+      el.innerHTML = `
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Client Name</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <input type="text" class="form-control" id="clientNameInput">
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-primary" id="clientNameSaveBtn">Save</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(el);
+    }
+    const instance = bootstrap.Modal.getOrCreateInstance(el);
+    const title = el.querySelector('.modal-title');
+    const input = el.querySelector('#clientNameInput');
+    const saveBtn = el.querySelector('#clientNameSaveBtn');
+    if (title && options && options.title) title.textContent = options.title;
+    if (input) input.value = (options && options.initial) || '';
+    function handleSave() {
+      if (!input) return;
+      const value = input.value.trim();
+      if (!value) return;
+      instance.hide();
+      if (options && typeof options.onSave === 'function') {
+        options.onSave(value);
+      }
+    }
+    if (saveBtn) {
+      saveBtn.onclick = null;
+      saveBtn.addEventListener('click', handleSave, { once: true });
+    }
+    if (input) {
+      input.onkeydown = function(e) {
+        if (e.key === 'Enter') {
+          handleSave();
+        }
+      };
+      setTimeout(() => input.focus(), 150);
+    }
+    instance.show();
+  }
+
   function render() {
     const list = ST.clients.all();
     tbody.innerHTML = '';
@@ -163,12 +219,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const editBtn = document.createElement('button'); editBtn.className = 'btn btn-sm btn-outline-secondary me-2'; editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
       editBtn.addEventListener('click', () => {
-        // Create a simple input dialog using Bootstrap modal or inline editing
-        const newName = window.prompt ? window.prompt('Edit client name', c.name) : c.name;
-        if (newName && newName.trim() && newName !== c.name) { 
-          ST.clients.update(c.id, { name: newName.trim() }); 
-          render(); 
-        }
+        openClientNameDialog({
+          title: 'Edit client name',
+          initial: c.name,
+          onSave(value) {
+            if (value && value !== c.name) {
+              ST.clients.update(c.id, { name: value });
+              render();
+            }
+          }
+        });
       });
 
       const delBtn = document.createElement('button'); delBtn.className = 'btn btn-sm btn-outline-danger'; delBtn.innerHTML = '<i class="bi bi-trash"></i>';
@@ -188,8 +248,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   addBtn.addEventListener('click', () => {
-    const name = window.prompt ? window.prompt('New client name') : null;
-    if (name && name.trim()) { ST.clients.add(name.trim()); render(); }
+    openClientNameDialog({
+      title: 'New client name',
+      initial: '',
+      onSave(value) {
+        if (value) {
+          ST.clients.add(value);
+          render();
+        }
+      }
+    });
   });
 
   // Photo modal functionality

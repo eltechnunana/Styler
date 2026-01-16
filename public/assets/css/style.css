@@ -63,7 +63,7 @@
 
 /* Home hero styling */
 .hero {
-  background: linear-gradient(135deg, #2c3e50 0%, #8e44ad 60%, #bdc3c7 100%);
+  background: linear-gradient(120deg, #facc15 0%, #fde047 30%, #2563eb 70%, #1e3a8a 100%);
 }
 .hero .brand-logo {
   font-size: 3rem;
@@ -76,6 +76,19 @@
 .card-hover:hover {
   transform: translateY(-2px);
   box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+}
+
+/* Brand accent cards */
+.card-brand {
+  background: linear-gradient(120deg, #facc15 0%, #fde047 30%, #2563eb 70%, #1e3a8a 100%);
+  color: #ffffff;
+}
+.card-brand .card-title,
+.card-brand .card-text,
+.card-brand .display-6,
+.card-brand .fs-4,
+.card-brand .fs-2 {
+  color: #ffffff;
 }
 
 /* Compact card styling */

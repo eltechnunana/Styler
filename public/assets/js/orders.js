@@ -78,88 +78,173 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Header with logo
     let yStart = 20;
-    if (biz.bizLogo) {
-      try {
-        // Detect image format from data URL
-        let format = 'JPEG';
-        if (biz.bizLogo.startsWith('data:image/png')) format = 'PNG';
-        else if (biz.bizLogo.startsWith('data:image/jpeg') || biz.bizLogo.startsWith('data:image/jpg')) format = 'JPEG';
-        else if (biz.bizLogo.startsWith('data:image/svg')) format = 'SVG';
-        
-        doc.addImage(biz.bizLogo, format, 14, 10, 40, 20);
-        yStart = 35;
-      } catch (e) {
-        console.warn('Could not add logo to PDF:', e);
-      }
-    }
     
-    doc.setFontSize(18);
-    doc.text(String(biz.bizName || 'StyleTrack'), biz.bizLogo ? 60 : 14, yStart);
-    doc.setFontSize(11);
-    const yBase = yStart + 6;
-    const contactLines = [biz.bizAddress, biz.bizEmail, biz.bizPhone].filter(Boolean);
-    contactLines.forEach((line, idx) => doc.text(String(line), biz.bizLogo ? 60 : 14, yBase + (idx * 6)));
+    // Header Section: Logo + Business Details
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text(String(biz.bizName || 'ELTECH DESIGN'), 14, yStart);
+    yStart += 6;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'italic');
+    doc.text(String(biz.bizTagline || 'Creative Fashion & Bespoke Tailoring'), 14, yStart);
+    yStart += 8;
 
-    // Title & meta
-    let y = yBase + (contactLines.length * 6) + 10;
+    doc.setFont(undefined, 'normal');
+    doc.text(`Business ID: ${biz.bizId || 'GW-028-40073'}`, 14, yStart);
+    yStart += 5;
+    if (biz.bizEmail) {
+      doc.text(`📧 ${biz.bizEmail}`, 14, yStart);
+      yStart += 5;
+    }
+    if (biz.bizPhone) {
+      doc.text(`📞 ${biz.bizPhone}`, 14, yStart);
+      yStart += 5;
+    }
+
+    yStart += 5;
+    doc.line(14, yStart, 196, yStart);
+    yStart += 10;
+
+    // INVOICE Title Section
     doc.setFontSize(14);
-    doc.text('Invoice', 14, y);
-    doc.setFontSize(11);
-    y += 8;
-    doc.text(`Invoice ID: ${invoiceId}`, 14, y);
-    y += 6; doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, y);
-    y += 6; doc.text(`Bill To: ${clientName}`, 14, y);
+    doc.setFont(undefined, 'bold');
+    doc.text('INVOICE', 14, yStart);
+    yStart += 8;
 
-    // Table-form line item
-    y += 10;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Invoice ID: ${invoiceId}`, 14, yStart);
+    yStart += 5;
+    doc.text(`Invoice Date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`, 14, yStart);
+    
+    yStart += 5;
+    doc.line(14, yStart, 196, yStart);
+    yStart += 8;
+
+    // Billed To Section
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Billed To', 14, yStart);
+    yStart += 6;
+    doc.setFontSize(10);
+    doc.text(`Customer Name: ${clientName}`, 14, yStart);
+
+    yStart += 5;
+    doc.line(14, yStart, 196, yStart);
+    yStart += 8;
+
+    // Invoice Details Table Header
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Invoice Details', 14, yStart);
+    yStart += 8;
+
     const startX = 14;
-    const pageW = doc.internal.pageSize.getWidth();
-    const rightX = pageW - 14;
-    // Column positions
     const colDescX = startX;
     const colQtyX = startX + 95;
     const colUnitX = startX + 120;
     const colLineX = startX + 160;
-    // Header
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'bold');
-    doc.text('Description', colDescX, y);
-    doc.text('Qty', colQtyX, y);
-    doc.text('Unit Price', colUnitX, y);
-    doc.text('Line Total', colLineX, y);
-    doc.setFont(undefined, 'normal');
-    y += 8;
-    // Row
-    const lineTotal = totals.subtotal;
-    doc.text(String(order.item || '—'), colDescX, y);
-    doc.text(String(totals.quantity), colQtyX, y);
-    doc.text(String(formatMoney(totals.unitPrice, currency)), colUnitX, y);
-    doc.text(String(formatMoney(lineTotal, currency)), colLineX, y);
-    // Summary
-    y += 12;
-    doc.setFont(undefined, 'bold');
-    doc.text('Subtotal', rightX - 50, y);
-    doc.setFont(undefined, 'normal');
-    doc.text(String(formatMoney(totals.subtotal, currency)), rightX, y, { align: 'right' });
-    y += 6;
-    doc.setFont(undefined, 'bold');
-    doc.text(`Discount (${totals.discountPct}%)`, rightX - 50, y);
-    doc.setFont(undefined, 'normal');
-    doc.text(String(formatMoney(totals.discountAmount, currency)), rightX, y, { align: 'right' });
-    y += 6;
-    doc.setFont(undefined, 'bold');
-    doc.text(`Tax (${totals.taxPct}%)`, rightX - 50, y);
-    doc.setFont(undefined, 'normal');
-    doc.text(String(formatMoney(totals.taxAmount, currency)), rightX, y, { align: 'right' });
-    y += 8;
-    doc.setFontSize(13);
-    doc.setFont(undefined, 'bold');
-    doc.text('Total', rightX - 50, y);
-    doc.text(String(formatMoney(totals.total, currency)), rightX, y, { align: 'right' });
 
-    // Footer
-    y += 12; doc.setFontSize(10);
-    doc.text('Thank you for your business!', 14, y);
+    doc.setFontSize(10);
+    doc.text('Description', colDescX, yStart);
+    doc.text('Quantity', colQtyX, yStart, { align: 'right' });
+    doc.text('Unit Price', colUnitX + 20, yStart, { align: 'right' });
+    doc.text('Line Total', colLineX + 25, yStart, { align: 'right' });
+    
+    yStart += 2;
+    doc.line(14, yStart, 196, yStart); // Underline header
+    yStart += 6;
+
+    // Table Row
+    doc.setFont(undefined, 'normal');
+    doc.text(String(order.item || 'Custom Order'), colDescX, yStart);
+    doc.text(String(totals.quantity), colQtyX, yStart, { align: 'right' });
+    doc.text(String(formatMoney(totals.unitPrice, currency)), colUnitX + 20, yStart, { align: 'right' });
+    doc.text(String(formatMoney(totals.subtotal, currency)), colLineX + 25, yStart, { align: 'right' });
+
+    yStart += 5;
+    doc.line(14, yStart, 196, yStart);
+    yStart += 8;
+
+    // Payment Summary Section
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Payment Summary', 14, yStart);
+    yStart += 8;
+
+    doc.setFontSize(10);
+    // Subtotal
+    doc.setFont(undefined, 'bold');
+    doc.text('Subtotal', 14, yStart);
+    doc.text(String(formatMoney(totals.subtotal, currency)), 180, yStart, { align: 'right' });
+    yStart += 6;
+
+    // Discount
+    doc.text(`Discount (${totals.discountPct}%)`, 14, yStart);
+    doc.text(`- ${formatMoney(totals.discountAmount, currency)}`, 180, yStart, { align: 'right' });
+    yStart += 6;
+
+    // Tax
+    doc.text(`Tax (${totals.taxPct}%)`, 14, yStart);
+    doc.text(String(formatMoney(totals.taxAmount, currency)), 180, yStart, { align: 'right' });
+    yStart += 6;
+
+    // Total Amount Due
+    doc.setFontSize(11);
+    doc.text('Total Amount Due', 14, yStart);
+    doc.text(String(formatMoney(totals.total, currency)), 180, yStart, { align: 'right' });
+    
+    yStart += 5;
+    doc.line(14, yStart, 196, yStart);
+    yStart += 8;
+
+    // Payment Status Section
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Payment Status', 14, yStart);
+    yStart += 6;
+    
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Status: Invoice issued`, 14, yStart);
+    yStart += 5;
+    doc.setFont(undefined, 'bold');
+    doc.text(`Amount Payable: ${formatMoney(totals.total, currency)}`, 14, yStart);
+
+    yStart += 5;
+    doc.line(14, yStart, 196, yStart);
+    yStart += 8;
+
+    // Notes & Terms
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Notes & Terms', 14, yStart);
+    yStart += 6;
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    const terms = [
+      '• All garments are custom-made with precision and care.',
+      '• Items are non-refundable after production begins.',
+      '• Please retain this invoice for your records.'
+    ];
+    terms.forEach(term => {
+      doc.text(term, 14, yStart);
+      yStart += 5;
+    });
+
+    yStart += 2;
+    doc.line(14, yStart, 196, yStart);
+    yStart += 8;
+
+    // Appreciation Message
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Appreciation Message', 14, yStart);
+    yStart += 6;
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'italic');
+    doc.text('Thank you for your business. We appreciate the opportunity to serve you and look forward to styling you again.', 14, yStart);
 
     const safeName = String(clientName).replace(/[^a-z0-9]/gi, '-');
     doc.save(`invoice-${safeName}-${invoiceId}.pdf`);
@@ -175,47 +260,157 @@ document.addEventListener('DOMContentLoaded', () => {
     const clientName = clientsById[order.clientId] || order.clientId || 'Client';
     const receiptId = `RCT-${order.id.slice(-6)}`;
     const currency = totals.currency;
+    const bizName = biz.bizName || 'ELORA COUTURE';
+    const tagline = biz.bizTagline || 'Luxury • Faith • African Elegance';
+    const location = biz.bizAddress || 'Accra, Ghana';
+    const phone = biz.bizPhone || '+233 24 000 0000';
+    const email = biz.bizEmail || 'eloracouture@gmail.com';
+    const website = biz.bizWebsite || 'http://www.eloracouture.com';
+    const itemDescription = order.item || 'Custom Fashion Item';
+    const category = order.category || 'Bespoke Fashion Design';
+    const quantity = totals.quantity;
+    const subtotal = totals.subtotal;
+    const discountAmount = totals.discountAmount;
+    const taxAmount = totals.taxAmount;
+    const totalPaid = totals.total;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const marginLeft = 18;
+    const marginRight = pageWidth - 18;
+    let y = 20;
 
-    // Header with logo
-    let yStart = 20;
+    // Render Logo if exists
     if (biz.bizLogo) {
       try {
-        // Detect image format from data URL
         let format = 'JPEG';
         if (biz.bizLogo.startsWith('data:image/png')) format = 'PNG';
-        else if (biz.bizLogo.startsWith('data:image/jpeg') || biz.bizLogo.startsWith('data:image/jpg')) format = 'JPEG';
         else if (biz.bizLogo.startsWith('data:image/svg')) format = 'SVG';
-        
-        doc.addImage(biz.bizLogo, format, 14, 10, 40, 20);
-        yStart = 35;
+        // Add logo at top-left, adjust text Y position
+        doc.addImage(biz.bizLogo, format, marginLeft, y, 25, 25);
+        y += 30; // Push text down
       } catch (e) {
         console.warn('Could not add logo to PDF:', e);
       }
     }
-    
-    doc.setFontSize(18);
-    doc.text(String(biz.bizName || 'StyleTrack'), biz.bizLogo ? 60 : 14, yStart);
+
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text(String(bizName), marginLeft, y);
+    y += 7;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    if (tagline) {
+      doc.text(String(tagline), marginLeft, y);
+      y += 6;
+    }
+    if (location) {
+      doc.text(String(location), marginLeft, y);
+      y += 5;
+    }
+    if (phone) {
+      doc.text(String(phone), marginLeft, y);
+      y += 5;
+    }
+    if (email) {
+      doc.text(String(email), marginLeft, y);
+      y += 5;
+    }
+    // Website removed as per user request
+    doc.line(marginLeft, y, marginRight, y);
+    y += 8;
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.text('RECEIPT', marginLeft, y);
+    y += 7;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Receipt ID: ${receiptId}`, marginLeft, y);
+    y += 5;
+    doc.text(`Transaction Date: ${new Date().toLocaleDateString()}`, marginLeft, y);
+    y += 5;
+    doc.line(marginLeft, y, marginRight, y);
+    y += 8;
     doc.setFontSize(11);
-    const yBase = yStart + 6;
-    const contactLines = [biz.bizAddress, biz.bizEmail, biz.bizPhone].filter(Boolean);
-    contactLines.forEach((line, idx) => doc.text(String(line), biz.bizLogo ? 60 : 14, yBase + (idx * 6)));
-
-    // Title & meta
-    let y = yBase + (contactLines.length * 6) + 10;
-    doc.setFontSize(14);
-    doc.text('Receipt', 14, y);
+    doc.setFont(undefined, 'bold');
+    doc.text('Customer Details', marginLeft, y);
+    y += 6;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Received From: ${clientName}`, marginLeft, y);
+    y += 5;
+    doc.line(marginLeft, y, marginRight, y);
+    y += 8;
     doc.setFontSize(11);
-    y += 8; doc.text(`Receipt ID: ${receiptId}`, 14, y);
-    y += 6; doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, y);
-    y += 6; doc.text(`Received From: ${clientName}`, 14, y);
-
-    // Payment details
-    y += 10;
-    doc.text(`Payment for: ${order.item || '—'}`, 14, y);
-    y += 6; doc.text(`Amount: ${formatMoney(totals.total, currency)}`, 14, y);
-    y += 10; doc.setFontSize(10);
-    doc.text('Payment recorded. No balance due.', 14, y);
-
+    doc.setFont(undefined, 'bold');
+    doc.text('Purchase Details', marginLeft, y);
+    y += 6;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Item Description: ${itemDescription}`, marginLeft, y);
+    y += 5;
+    doc.text(`Category: ${category}`, marginLeft, y);
+    y += 5;
+    doc.text(`Quantity: ${quantity}`, marginLeft, y);
+    y += 5;
+    doc.line(marginLeft, y, marginRight, y);
+    y += 8;
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('Payment Summary', marginLeft, y);
+    y += 6;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Subtotal: ${formatMoney(subtotal, currency)}`, marginLeft, y);
+    y += 5;
+    doc.text(`Discount: ${formatMoney(discountAmount, currency)}`, marginLeft, y);
+    y += 5;
+    doc.text(`Tax: ${formatMoney(taxAmount, currency)}`, marginLeft, y);
+    y += 7;
+    doc.setFont(undefined, 'bold');
+    doc.text(`Total Amount Paid: ${formatMoney(totalPaid, currency)}`, marginLeft, y);
+    y += 7;
+    doc.line(marginLeft, y, marginRight, y);
+    y += 8;
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('Payment Status', marginLeft, y);
+    y += 6;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text('Status: Payment successfully recorded', marginLeft, y);
+    y += 5;
+    doc.text(`Outstanding Balance: ${formatMoney(0, currency)}`, marginLeft, y);
+    y += 5;
+    doc.line(marginLeft, y, marginRight, y);
+    y += 8;
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('Important Notice', marginLeft, y);
+    y += 6;
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    const noticeLines = [
+      'All garments are carefully designed and tailored to meet our quality standards.',
+      'Items are non-refundable after delivery unless otherwise agreed.'
+    ];
+    noticeLines.forEach(line => {
+      doc.text(line, marginLeft, y);
+      y += 4;
+    });
+    y += 3;
+    doc.line(marginLeft, y, marginRight, y);
+    y += 8;
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('Thank You Message', marginLeft, y);
+    y += 6;
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'italic');
+    doc.text(`Thank you for choosing ${bizName || 'us'}. Every piece is crafted with care—`, marginLeft, y);
+    y += 4;
+    doc.text('wear it with confidence and grace.', marginLeft, y);
+    y += 6;
+    doc.setFont(undefined, 'normal');
+    // Authorized Signature section removed as per user request
     const safeName = String(clientName).replace(/[^a-z0-9]/gi, '-');
     doc.save(`receipt-${safeName}-${receiptId}.pdf`);
   }

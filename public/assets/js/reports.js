@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cardSpecs.forEach(s => {
       const col = document.createElement('div'); col.className = 'col-sm-6 col-lg-3';
       col.innerHTML = `
-        <div class="card h-100">
+        <div class="card card-brand h-100">
           <div class="card-body d-flex align-items-center justify-content-between">
             <div>
               <div class="text-muted">${s.title}</div>
